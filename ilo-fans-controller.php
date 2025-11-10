@@ -58,6 +58,25 @@ function get_fans() {
 	return $fans ?? [];
 }
 
+function ssh_authenticate($ssh_handle) {
+	global $ILO_USERNAME, $ILO_PASSWORD, $ILO_SSH_PUBLIC_KEY, $ILO_SSH_PRIVATE_KEY, $ILO_SSH_KEY_PASSPHRASE;
+
+	// Try SSH key authentication first if keys are configured
+	if (!empty($ILO_SSH_PUBLIC_KEY) && !empty($ILO_SSH_PRIVATE_KEY)) {
+		if (file_exists($ILO_SSH_PUBLIC_KEY) && file_exists($ILO_SSH_PRIVATE_KEY)) {
+			$passphrase = !empty($ILO_SSH_KEY_PASSPHRASE) ? $ILO_SSH_KEY_PASSPHRASE : null;
+
+			if (ssh2_auth_pubkey_file($ssh_handle, $ILO_USERNAME, $ILO_SSH_PUBLIC_KEY, $ILO_SSH_PRIVATE_KEY, $passphrase)) {
+				return true;  // SSH key authentication succeeded
+			}
+			// If key auth fails, fall through to password auth
+		}
+	}
+
+	// Fallback to password authentication
+	return ssh2_auth_password($ssh_handle, $ILO_USERNAME, $ILO_PASSWORD);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 	$FANS = get_fans();
 
@@ -90,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 						if (($speed >= 10 && $speed <= 100) && $speed != $FANS[$fan]) {  // Check if the speed is valid and different from the current fan's speed
 							if (!$connected) {  // Connect to iLO (only once)
 								$ssh_handle = ssh2_connect($ILO_HOST, 22);
-								ssh2_auth_password($ssh_handle, $ILO_USERNAME, $ILO_PASSWORD);
+								ssh_authenticate($ssh_handle);
 								$connected = true;
 							}
 

@@ -66,6 +66,8 @@ docker run -d --name ilo-fans-controller --restart always \
 
 Or if you prefer, you can use `docker compose`, as the [docker-compose.yaml](https://github.com/alex3025/ilo-fans-controller/blob/main/docker-compose.yaml) file is provided as well.
 
+> 💡 **TIP:** For advanced use cases like automated scheduling or PID-based fan control, check out the [Advanced Usage & Examples](#advanced-usage--examples) section below!
+
 ---
 
 > ⚠ **IMPORTANT!** ⚠
@@ -135,8 +137,22 @@ Or if you prefer, you can use `docker compose`, as the [docker-compose.yaml](htt
     $ILO_USERNAME = 'Administrator';
     $ILO_PASSWORD = 'AdministratorPassword1234';
 
+    /*
+    SSH KEY AUTHENTICATION (OPTIONAL)
+    --------------
+    If you prefer SSH key authentication instead of password,
+    specify the paths to your public and private key files.
+    Leave empty to use password authentication (default).
+    */
+
+    $ILO_SSH_PUBLIC_KEY = '';   // Ex. /path/to/id_rsa.pub
+    $ILO_SSH_PRIVATE_KEY = '';  // Ex. /path/to/id_rsa
+    $ILO_SSH_KEY_PASSPHRASE = '';  // Leave empty if key has no passphrase
+
     ?>
     ```
+
+    > 🔐 **SSH Key Authentication:** For improved security, you can use SSH keys instead of passwords. Simply specify the paths to your public and private key files in the configuration. The password will only be used as a fallback if key authentication is not configured or fails.
 
 2. When you're done, create a new subdirectory in your web server root directory (usually `/var/www/html/`) and copy the `config.inc.php`, `ilo-fans-controller.php` and `favicon.ico` to it:
 
@@ -181,6 +197,71 @@ To fix this, run the following command to change the file owner to `www-data` (t
 ```sh
 sudo chown www-data:www-data /var/www/html/ilo-fans-controller/presets.json
 ```
+
+---
+
+## Advanced Usage & Examples
+
+The [`examples/`](examples/) directory contains scripts and documentation for advanced use cases:
+
+### 📅 Automated Scheduling ([`scheduler.sh`](examples/scheduler.sh))
+
+Automatically apply different fan speed presets based on time of day and day of week. Perfect for:
+- **Home labs**: Silent mode at night (9PM-9AM), normal mode during the day
+- **Office servers**: Quiet on weekends and after hours
+- **Seasonal adjustments**: Adapt to summer heat or winter cooling
+
+**Quick start:**
+```bash
+# Edit configuration
+nano examples/scheduler.sh
+
+# Test it
+./examples/scheduler.sh
+
+# Add to crontab for automatic execution every hour
+echo "0 * * * * $(pwd)/examples/scheduler.sh >> /var/log/ilo-scheduler.log 2>&1" | crontab -
+```
+
+See [examples/README.md](examples/README.md) for detailed setup instructions.
+
+### 🎛️ PID-Based Fan Control ([`PID_CONTROL.md`](examples/PID_CONTROL.md))
+
+Instead of static fan speeds, configure **dynamic temperature-based curves** where iLO automatically adjusts fans based on current temperatures:
+
+- **Safer**: Fans automatically speed up if temperatures rise
+- **Smarter**: Reduces noise when temperatures are low
+- **Customizable**: Define your own temperature zones and response curves
+
+**Quick start:**
+```bash
+# Edit configuration
+nano examples/pid-setup.sh
+
+# Apply balanced profile (good for most use cases)
+./examples/pid-setup.sh
+```
+
+See [examples/PID_CONTROL.md](examples/PID_CONTROL.md) for detailed documentation and safety considerations.
+
+### 🔐 SSH Key Authentication
+
+For improved security, you can use SSH key-based authentication instead of passwords in configuration files:
+
+**For Docker:**
+```bash
+docker run -d --name ilo-fans-controller --restart always \
+    -p 8000:80 \
+    -e ILO_HOST='your-ilo-address' \
+    -e ILO_USERNAME='your-ilo-username' \
+    -e ILO_PASSWORD='fallback-password' \
+    -e ILO_SSH_PUBLIC_KEY='/path/to/id_rsa.pub' \
+    -e ILO_SSH_PRIVATE_KEY='/path/to/id_rsa' \
+    -v /path/to/ssh-keys:/keys:ro \
+    ghcr.io/alex3025/ilo-fans-controller:latest
+```
+
+**For manual installation**, edit `config.inc.php` and set the SSH key paths (see configuration example above).
 
 ---
 
