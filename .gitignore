@@ -1,8 +1,27 @@
 # Custom VSCode settings
 .vscode
+.idea
 
 # Testing Presets file
 presets.json
 
 # Tailwind Config file (nothing special, used for VSCode Tailwind CSS IntelliSense)
 tailwind.config.js
+
+# Enhanced features data directory
+data/
+*.log
+
+# Backup files
+*.backup
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*~
+*.swp
+*.swo

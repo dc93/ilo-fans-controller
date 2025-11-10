@@ -200,6 +200,55 @@ sudo chown www-data:www-data /var/www/html/ilo-fans-controller/presets.json
 
 ---
 
+## ✨ Enhanced Features (v2.0+)
+
+The tool now includes powerful advanced features built right in:
+
+- 🌡️ **Real-time Temperature Monitoring** - See sensor temps alongside fan speeds
+- 💚 **System Health Dashboard** - Overall status with warnings and errors
+- ⚡ **Quick Action Buttons** - Mute/Normal/Boost all fans with one click
+- 📊 **Historical Charts** - Visualize fan speeds over time (1h to 7d)
+- ⌨️ **Keyboard Shortcuts** - Control everything from your keyboard
+- 💾 **Backup & Restore** - Export/import your configuration
+- 🔔 **Smart Notifications** - Toast messages for all actions
+- 🔄 **Auto-Refresh** - Real-time updates every 60 seconds
+- 📐 **PWM Value Display** - See exact PWM values (0-255)
+- 📝 **Activity Logging** - Track all changes with timestamps
+
+**All features work out of the box!** Just use the standard installation.
+
+For detailed documentation, see [ENHANCED_FEATURES.md](ENHANCED_FEATURES.md).
+
+### Quick Feature Overview
+
+**Keyboard Shortcuts:**
+- `Ctrl/Cmd + S` - Apply speeds
+- `Alt + M` - Mute all (15%)
+- `Alt + N` - Normal (50%)
+- `Alt + B` - Boost all (100%)
+- `Alt + E` - Export config
+- `1-9` - Apply preset 1-9
+
+**API Endpoints:**
+```bash
+# Get temperatures
+curl http://your-server/index.php?api=temperatures
+
+# Get system health
+curl http://your-server/index.php?api=health
+
+# Get historical data (24 hours)
+curl http://your-server/index.php?api=history&range=24h
+
+# Get activity logs
+curl http://your-server/index.php?api=logs&limit=100
+
+# Export configuration
+curl http://your-server/index.php?api=export > backup.json
+```
+
+---
+
 ## Advanced Usage & Examples
 
 The [`examples/`](examples/) directory contains scripts and documentation for advanced use cases:

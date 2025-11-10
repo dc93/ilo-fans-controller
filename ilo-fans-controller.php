@@ -22,40 +22,187 @@ function get_presets() {
 		return json_decode(file_get_contents('presets.json'), true);
 }
 
-function get_fans() {
-	global $ILO_HOST, $ILO_USERNAME, $ILO_PASSWORD;  // From config.inc.php
+function get_thermal_data() {
+	global $ILO_HOST, $ILO_USERNAME, $ILO_PASSWORD;
 
 	$curl_handle = curl_init("https://$ILO_HOST/redfish/v1/chassis/1/Thermal");
 
-	curl_setopt($curl_handle, CURLOPT_USERPWD, "$ILO_USERNAME:$ILO_PASSWORD");  // Authentication (Basic)
-
-	// An attempt to speed up the request
-	// curl_setopt($curl_handle, CURLOPT_ENCODING, '');
-	// curl_setopt($curl_handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-	// curl_setopt($curl_handle, CURLOPT_POSTREDIR, CURL_REDIR_POST_ALL);
-
-	// Disable SSL verification
+	curl_setopt($curl_handle, CURLOPT_USERPWD, "$ILO_USERNAME:$ILO_PASSWORD");
 	curl_setopt($curl_handle, CURLOPT_SSL_VERIFYHOST, 0);
 	curl_setopt($curl_handle, CURLOPT_SSL_VERIFYPEER, 0);
-
-	curl_setopt($curl_handle, CURLOPT_FOLLOWLOCATION, true);  // Follow redirects
-	curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, 1);  // Return the JSON data
+	curl_setopt($curl_handle, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($curl_handle, CURLOPT_TIMEOUT, 10);
 
 	$raw_ilo_data = curl_exec($curl_handle);
-
-	// Print errors if any
-	// echo curl_error($curl_handle);
-	// echo curl_errno($curl_handle);
+	$http_code = curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
+	$curl_error = curl_error($curl_handle);
 
 	curl_close($curl_handle);
 
-	if ($raw_ilo_data) {  // If the request was successful
-		$fans = [];
-		foreach (json_decode($raw_ilo_data, true)['Fans'] as $fan)
-			$fans[ $fan['FanName'] ] = $fan['CurrentReading'];
+	if ($raw_ilo_data && $http_code == 200) {
+		return json_decode($raw_ilo_data, true);
 	}
 
-	return $fans ?? [];
+	return ['error' => $curl_error ?: 'Failed to retrieve thermal data', 'http_code' => $http_code];
+}
+
+function get_fans() {
+	$thermal_data = get_thermal_data();
+
+	if (isset($thermal_data['error'])) {
+		return [];
+	}
+
+	$fans = [];
+	if (isset($thermal_data['Fans'])) {
+		foreach ($thermal_data['Fans'] as $fan) {
+			$fans[$fan['FanName']] = $fan['CurrentReading'];
+		}
+	}
+
+	return $fans;
+}
+
+function get_temperatures() {
+	$thermal_data = get_thermal_data();
+
+	if (isset($thermal_data['error'])) {
+		return [];
+	}
+
+	$temperatures = [];
+	if (isset($thermal_data['Temperatures'])) {
+		foreach ($thermal_data['Temperatures'] as $temp) {
+			$temperatures[$temp['Name']] = [
+				'current' => $temp['ReadingCelsius'] ?? null,
+				'upper_threshold' => $temp['UpperThresholdCritical'] ?? null,
+				'lower_threshold' => $temp['LowerThresholdCritical'] ?? null,
+				'status' => $temp['Status']['Health'] ?? 'Unknown'
+			];
+		}
+	}
+
+	return $temperatures;
+}
+
+function get_health_status() {
+	$fans = get_fans();
+	$temperatures = get_temperatures();
+	$thermal_data = get_thermal_data();
+
+	$total_fans = count($fans);
+	$responding_fans = count(array_filter($fans, fn($speed) => $speed > 0));
+
+	$warnings = [];
+	$errors = [];
+
+	// Check for non-responding fans
+	if ($responding_fans < $total_fans) {
+		$errors[] = ($total_fans - $responding_fans) . " fan(s) not responding";
+	}
+
+	// Check temperatures
+	foreach ($temperatures as $name => $temp) {
+		if ($temp['current'] && $temp['upper_threshold']) {
+			if ($temp['current'] >= $temp['upper_threshold']) {
+				$errors[] = "$name temperature critical: {$temp['current']}°C";
+			} elseif ($temp['current'] >= ($temp['upper_threshold'] * 0.9)) {
+				$warnings[] = "$name temperature high: {$temp['current']}°C";
+			}
+		}
+	}
+
+	// Overall status
+	$status = 'healthy';
+	if (count($errors) > 0) {
+		$status = 'critical';
+	} elseif (count($warnings) > 0) {
+		$status = 'warning';
+	}
+
+	// Check iLO connection
+	$ilo_connection = isset($thermal_data['error']) ? 'error' : 'ok';
+
+	return [
+		'status' => $status,
+		'ilo_connection' => $ilo_connection,
+		'last_update' => date('c'),
+		'fans' => [
+			'total' => $total_fans,
+			'responding' => $responding_fans,
+			'errors' => $total_fans - $responding_fans
+		],
+		'temperatures' => [
+			'count' => count($temperatures),
+			'max' => !empty($temperatures) ? max(array_column($temperatures, 'current')) : null
+		],
+		'warnings' => $warnings,
+		'errors' => $errors
+	];
+}
+
+function log_data($action, $details = []) {
+	$log_file = 'data/logs.json';
+
+	// Ensure data directory exists
+	if (!file_exists('data')) {
+		mkdir('data', 0755, true);
+	}
+
+	$log_entry = [
+		'timestamp' => date('c'),
+		'action' => $action,
+		'details' => $details,
+		'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+	];
+
+	// Read existing logs
+	$logs = [];
+	if (file_exists($log_file)) {
+		$logs = json_decode(file_get_contents($log_file), true) ?? [];
+	}
+
+	// Add new entry
+	array_unshift($logs, $log_entry);
+
+	// Keep only last 1000 entries
+	$logs = array_slice($logs, 0, 1000);
+
+	// Save logs
+	file_put_contents($log_file, json_encode($logs, JSON_PRETTY_PRINT));
+}
+
+function save_history($fans, $temperatures) {
+	$history_file = 'data/history.json';
+
+	if (!file_exists('data')) {
+		mkdir('data', 0755, true);
+	}
+
+	$entry = [
+		'timestamp' => time(),
+		'datetime' => date('c'),
+		'fans' => $fans,
+		'temperatures' => array_map(fn($t) => $t['current'], $temperatures)
+	];
+
+	// Read existing history
+	$history = [];
+	if (file_exists($history_file)) {
+		$history = json_decode(file_get_contents($history_file), true) ?? [];
+	}
+
+	// Add new entry
+	$history[] = $entry;
+
+	// Keep only last 7 days (assuming 5 min intervals = 288 entries per day)
+	$max_entries = 288 * 7; // 2016 entries
+	if (count($history) > $max_entries) {
+		$history = array_slice($history, -$max_entries);
+	}
+
+	file_put_contents($history_file, json_encode($history));
 }
 
 function ssh_authenticate($ssh_handle) {
@@ -78,15 +225,94 @@ function ssh_authenticate($ssh_handle) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+	// API endpoints
+	if (isset($_GET['api'])) {
+		$api = $_GET['api'];
+
+		switch ($api) {
+			case 'fans':
+				$FANS = get_fans();
+				die(json_encode($FANS, JSON_PRETTY_PRINT));
+
+			case 'temperatures':
+				$temperatures = get_temperatures();
+				die(json_encode($temperatures, JSON_PRETTY_PRINT));
+
+			case 'thermal':
+				// Complete thermal data (fans + temperatures)
+				$fans = get_fans();
+				$temperatures = get_temperatures();
+				die(json_encode([
+					'fans' => $fans,
+					'temperatures' => $temperatures,
+					'timestamp' => date('c')
+				], JSON_PRETTY_PRINT));
+
+			case 'presets':
+				$PRESETS = get_presets();
+				die(json_encode($PRESETS, JSON_PRETTY_PRINT));
+
+			case 'health':
+				$health = get_health_status();
+				die(json_encode($health, JSON_PRETTY_PRINT));
+
+			case 'history':
+				$range = $_GET['range'] ?? '24h';
+				$history_file = 'data/history.json';
+				if (file_exists($history_file)) {
+					$history = json_decode(file_get_contents($history_file), true) ?? [];
+
+					// Filter by time range
+					$cutoff_time = time();
+					if ($range === '1h') $cutoff_time -= 3600;
+					elseif ($range === '6h') $cutoff_time -= 6 * 3600;
+					elseif ($range === '24h') $cutoff_time -= 24 * 3600;
+					elseif ($range === '7d') $cutoff_time -= 7 * 24 * 3600;
+
+					$filtered = array_filter($history, fn($entry) => $entry['timestamp'] >= $cutoff_time);
+					die(json_encode(array_values($filtered), JSON_PRETTY_PRINT));
+				}
+				die(json_encode([], JSON_PRETTY_PRINT));
+
+			case 'logs':
+				$limit = intval($_GET['limit'] ?? 100);
+				$log_file = 'data/logs.json';
+				if (file_exists($log_file)) {
+					$logs = json_decode(file_get_contents($log_file), true) ?? [];
+					$logs = array_slice($logs, 0, $limit);
+					die(json_encode($logs, JSON_PRETTY_PRINT));
+				}
+				die(json_encode([], JSON_PRETTY_PRINT));
+
+			case 'export':
+				// Export complete configuration
+				$config = [
+					'version' => '2.0.0',
+					'export_date' => date('c'),
+					'presets' => get_presets(),
+					'data' => [
+						'fans' => get_fans(),
+						'temperatures' => get_temperatures()
+					]
+				];
+				header('Content-Type: application/json');
+				header('Content-Disposition: attachment; filename="ilo-config-' . date('Y-m-d') . '.json"');
+				die(json_encode($config, JSON_PRETTY_PRINT));
+
+			default:
+				http_response_code(404);
+				die(json_encode(['error' => 'Unknown API endpoint'], JSON_PRETTY_PRINT));
+		}
+	}
+
+	// Regular page load
 	$FANS = get_fans();
-
-	if (isset($_GET['api']) && $_GET['api'] == 'fans')  // Return fans in JSON format with ?api=fans
-		die(json_encode($FANS, JSON_PRETTY_PRINT));
-
 	$PRESETS = get_presets();
+	$TEMPERATURES = get_temperatures();
+	$HEALTH = get_health_status();
 
-	if (isset($_GET['api']) && $_GET['api'] == 'presets')  // Return presets in JSON format with ?api=presets
-		die(json_encode($PRESETS, JSON_PRETTY_PRINT));
+	// Save history periodically (every page load is a snapshot)
+	save_history($FANS, $TEMPERATURES);
 
 } else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	// Get POST JSON data from JS fetch()
@@ -133,10 +359,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 						$FANS = get_fans();
 					while ($FANS !== array_merge($FANS, $data['fans']));  // Wait until the fans are updated
 
+				// Log the action
+				log_data('set_fan_speeds', [
+					'fans' => $data['fans'],
+					'updated_count' => $updated
+				]);
+
 				die(json_encode($FANS, JSON_PRETTY_PRINT));
 			} else if ($data['action'] === 'presets' && isset($data['presets'])) {  // Save presets to presets.json
 				$raw_presets = json_encode($data['presets'], JSON_PRETTY_PRINT);
 				file_put_contents('presets.json', $raw_presets);
+
+				// Log the action
+				log_data('update_presets', [
+					'preset_count' => count($data['presets'])
+				]);
+
 				die($raw_presets);
 			} else
 				die('Invalid request: missing "fans" or "presets" key.');

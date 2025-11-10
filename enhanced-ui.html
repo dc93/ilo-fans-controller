@@ -1,0 +1,304 @@
+<!-- Enhanced UI Components for iLO Fans Controller -->
+<!-- Include this file in your main HTML to add advanced features -->
+
+<!-- Health Status Badge -->
+<div x-data class="mb-5 flex items-center justify-between">
+	<div class="flex items-center space-x-3">
+		<div class="flex items-center space-x-2">
+			<span
+				class="h-3 w-3 rounded-full"
+				:class="$store.health.statusColor"
+				x-show="$store.health"
+			></span>
+			<span
+				class="text-sm font-medium dark:text-gray-300 text-gray-600"
+				x-text="$store.health.statusText"
+				x-show="$store.health"
+			>Loading...</span>
+		</div>
+
+		<!-- Warnings/Errors indicator -->
+		<div x-show="$store.health.hasWarnings() || $store.health.hasErrors()" class="flex items-center space-x-2">
+			<button
+				@click="showHealthDetails = !showHealthDetails"
+				class="text-xs px-2 py-1 rounded-md"
+				:class="$store.health.hasErrors() ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'"
+			>
+				<span x-show="$store.health.hasErrors()" x-text="`${$store.health.data.errors?.length || 0} error(s)`"></span>
+				<span x-show="!$store.health.hasErrors() && $store.health.hasWarnings()" x-text="`${$store.health.data.warnings?.length || 0} warning(s)`"></span>
+			</button>
+		</div>
+	</div>
+
+	<!-- Last update time -->
+	<div class="text-xs dark:text-gray-600 text-gray-400" x-show="$store.health.lastUpdate">
+		<span>Updated: </span>
+		<span x-text="$store.health.lastUpdate ? new Date($store.health.lastUpdate).toLocaleTimeString() : ''"></span>
+	</div>
+</div>
+
+<!-- Health Details Panel (collapsible) -->
+<div
+	x-data="{ showHealthDetails: false }"
+	x-show="showHealthDetails && ($store.health.hasWarnings() || $store.health.hasErrors())"
+	x-transition
+	class="mb-5 p-4 rounded-md border dark:bg-gray-900 dark:border-gray-800 bg-gray-50 border-gray-200"
+>
+	<!-- Errors -->
+	<div x-show="$store.health.data.errors?.length > 0" class="mb-3">
+		<h4 class="font-semibold text-red-600 dark:text-red-400 mb-2">Errors:</h4>
+		<ul class="list-disc list-inside space-y-1">
+			<template x-for="error in $store.health.data.errors" :key="error">
+				<li class="text-sm dark:text-red-300 text-red-700" x-text="error"></li>
+			</template>
+		</ul>
+	</div>
+
+	<!-- Warnings -->
+	<div x-show="$store.health.data.warnings?.length > 0">
+		<h4 class="font-semibold text-yellow-600 dark:text-yellow-400 mb-2">Warnings:</h4>
+		<ul class="list-disc list-inside space-y-1">
+			<template x-for="warning in $store.health.data.warnings" :key="warning">
+				<li class="text-sm dark:text-yellow-300 text-yellow-700" x-text="warning"></li>
+			</template>
+		</ul>
+	</div>
+</div>
+
+<!-- Quick Actions Bar -->
+<div class="mb-5 flex flex-wrap gap-2">
+	<button
+		@click="$store.quickActions.muteAll()"
+		:disabled="$store.app.isLoading"
+		class="outline-button px-3 py-1.5 text-sm flex items-center space-x-1.5"
+		title="Set all fans to 15% (Alt+M)"
+	>
+		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+		</svg>
+		<span>Mute All</span>
+	</button>
+
+	<button
+		@click="$store.quickActions.normalAll()"
+		:disabled="$store.app.isLoading"
+		class="outline-button px-3 py-1.5 text-sm flex items-center space-x-1.5"
+		title="Set all fans to 50% (Alt+N)"
+	>
+		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+			<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+		</svg>
+		<span>Normal</span>
+	</button>
+
+	<button
+		@click="$store.quickActions.boostAll()"
+		:disabled="$store.app.isLoading"
+		class="outline-button px-3 py-1.5 text-sm flex items-center space-x-1.5"
+		title="Set all fans to 100% (Alt+B)"
+	>
+		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+		</svg>
+		<span>Boost All</span>
+	</button>
+
+	<button
+		@click="$store.backup.exportConfig()"
+		:disabled="$store.app.isLoading"
+		class="outline-button px-3 py-1.5 text-sm flex items-center space-x-1.5"
+		title="Export configuration (Alt+E)"
+	>
+		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+		</svg>
+		<span>Export</span>
+	</button>
+
+	<label class="outline-button px-3 py-1.5 text-sm flex items-center space-x-1.5 cursor-pointer">
+		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+		</svg>
+		<span>Import</span>
+		<input type="file" accept=".json" class="hidden" @change="$store.backup.importConfig($event.target.files[0])">
+	</label>
+</div>
+
+<!-- Temperature Cards (optional - show above fans) -->
+<div x-data x-show="Object.keys($store.temperatures.temps).length > 0" class="mb-5">
+	<h2 class="text-xl font-semibold select-none dark:text-white text-black mb-3">Temperatures</h2>
+	<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+		<template x-for="(temp, name) in $store.temperatures.temps" :key="name">
+			<div class="p-3 rounded-md border dark:bg-gray-925 dark:border-gray-875 bg-gray-50 border-gray-150">
+				<div class="text-xs dark:text-gray-500 text-gray-400 mb-1" x-text="name"></div>
+				<div class="flex items-baseline space-x-1">
+					<span class="text-2xl font-bold" :class="$store.temperatures.getStatusColor(name)" x-text="temp.current"></span>
+					<span class="text-sm dark:text-gray-400 text-gray-500">°C</span>
+				</div>
+				<div class="text-xs dark:text-gray-600 text-gray-400 mt-1" x-show="temp.upper_threshold">
+					Max: <span x-text="temp.upper_threshold"></span>°C
+				</div>
+			</div>
+		</template>
+	</div>
+</div>
+
+<!-- Enhanced Fan Row Component (add to each fan row) -->
+<!-- This shows temperature and PWM inline with fan controls -->
+<template x-for="(speed, name) in $store.fans.fans" :key="name">
+	<div class="flex flex-col space-y-2">
+		<!-- Original fan controls here -->
+
+		<!-- Enhanced info row -->
+		<div class="flex items-center space-x-4 text-xs dark:text-gray-600 text-gray-400 pl-16">
+			<!-- PWM Value -->
+			<div class="flex items-center space-x-1">
+				<span>PWM:</span>
+				<span class="font-mono" x-text="$store.app.speedToPWM ? $store.app.speedToPWM(speed) : Math.ceil(speed / 100 * 255)"></span>
+			</div>
+
+			<!-- Temperature (if available) -->
+			<div x-show="$store.temperatures" class="flex items-center space-x-1">
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 01-2.031.352 5.989 5.989 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" />
+				</svg>
+				<span>~</span>
+				<span>--</span>
+				<span>°C</span>
+			</div>
+		</div>
+	</div>
+</template>
+
+<!-- Notifications Container -->
+<div
+	x-data
+	class="fixed top-4 right-4 z-50 space-y-2 max-w-sm"
+	x-show="$store.notifications.items.length > 0"
+>
+	<template x-for="notification in $store.notifications.items" :key="notification.id">
+		<div
+			x-transition:enter="transition ease-out duration-300"
+			x-transition:enter-start="opacity-0 translate-x-full"
+			x-transition:enter-end="opacity-100 translate-x-0"
+			x-transition:leave="transition ease-in duration-200"
+			x-transition:leave-start="opacity-100"
+			x-transition:leave-end="opacity-0"
+			class="p-4 rounded-md shadow-lg border"
+			:class="{
+				'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-100': notification.type === 'info',
+				'bg-green-50 border-green-200 text-green-800 dark:bg-green-900 dark:border-green-700 dark:text-green-100': notification.type === 'success',
+				'bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900 dark:border-yellow-700 dark:text-yellow-100': notification.type === 'warning',
+				'bg-red-50 border-red-200 text-red-800 dark:bg-red-900 dark:border-red-700 dark:text-red-100': notification.type === 'error'
+			}"
+		>
+			<div class="flex items-start justify-between">
+				<p class="text-sm flex-1" x-text="notification.message"></p>
+				<button
+					@click="$store.notifications.remove(notification.id)"
+					class="ml-3 flex-shrink-0"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
+		</div>
+	</template>
+</div>
+
+<!-- Historical Chart (add where you want the chart) -->
+<div x-data="{ showChart: false }" class="mt-8">
+	<button
+		@click="showChart = !showChart; if(showChart) $store.charts.fetchHistory()"
+		class="outline-button px-4 py-2 mb-4"
+	>
+		<span x-show="!showChart">Show Historical Data</span>
+		<span x-show="showChart">Hide Historical Data</span>
+	</button>
+
+	<div x-show="showChart" x-transition class="p-4 rounded-md border dark:bg-gray-925 dark:border-gray-875 bg-gray-50 border-gray-150">
+		<div class="flex items-center justify-between mb-4">
+			<h3 class="text-lg font-semibold dark:text-white text-black">Fan Speed History</h3>
+
+			<!-- Range selector -->
+			<div class="flex space-x-2">
+				<button
+					@click="$store.charts.changeRange('1h')"
+					:class="$store.charts.range === '1h' ? 'bg-emerald-500 text-white' : ''"
+					class="px-3 py-1 text-sm rounded-md dark:bg-gray-900 dark:text-gray-300"
+				>1h</button>
+				<button
+					@click="$store.charts.changeRange('6h')"
+					:class="$store.charts.range === '6h' ? 'bg-emerald-500 text-white' : ''"
+					class="px-3 py-1 text-sm rounded-md dark:bg-gray-900 dark:text-gray-300"
+				>6h</button>
+				<button
+					@click="$store.charts.changeRange('24h')"
+					:class="$store.charts.range === '24h' ? 'bg-emerald-500 text-white' : ''"
+					class="px-3 py-1 text-sm rounded-md dark:bg-gray-900 dark:text-gray-300"
+				>24h</button>
+				<button
+					@click="$store.charts.changeRange('7d')"
+					:class="$store.charts.range === '7d' ? 'bg-emerald-500 text-white' : ''"
+					class="px-3 py-1 text-sm rounded-md dark:bg-gray-900 dark:text-gray-300"
+				>7d</button>
+			</div>
+		</div>
+
+		<!-- Chart canvas -->
+		<canvas id="historyChart" class="w-full" style="max-height: 400px;"></canvas>
+
+		<!-- Note about Chart.js -->
+		<p class="text-xs dark:text-gray-600 text-gray-400 mt-3">
+			Note: Charts require Chart.js. Include:
+			<code class="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded">&lt;script src="https://cdn.jsdelivr.net/npm/chart.js"&gt;&lt;/script&gt;</code>
+		</p>
+	</div>
+</div>
+
+<!-- Keyboard Shortcuts Help Panel -->
+<div x-data="{ showShortcuts: false }" class="mt-8">
+	<button
+		@click="showShortcuts = !showShortcuts"
+		class="text-sm dark:text-gray-500 dark:hover:text-gray-300 text-gray-400 hover:text-gray-600"
+	>
+		<span x-show="!showShortcuts">⌨️ Show Keyboard Shortcuts</span>
+		<span x-show="showShortcuts">⌨️ Hide Keyboard Shortcuts</span>
+	</button>
+
+	<div x-show="showShortcuts" x-transition class="mt-3 p-4 rounded-md border dark:bg-gray-925 dark:border-gray-875 bg-gray-50 border-gray-150">
+		<h4 class="font-semibold dark:text-white text-black mb-3">Keyboard Shortcuts</h4>
+		<dl class="space-y-2 text-sm">
+			<div class="flex justify-between">
+				<dt class="font-mono dark:text-gray-400 text-gray-600">Ctrl/Cmd + S</dt>
+				<dd class="dark:text-gray-300 text-gray-700">Apply fan speeds</dd>
+			</div>
+			<div class="flex justify-between">
+				<dt class="font-mono dark:text-gray-400 text-gray-600">Alt + M</dt>
+				<dd class="dark:text-gray-300 text-gray-700">Mute all fans (15%)</dd>
+			</div>
+			<div class="flex justify-between">
+				<dt class="font-mono dark:text-gray-400 text-gray-600">Alt + N</dt>
+				<dd class="dark:text-gray-300 text-gray-700">Normal speed (50%)</dd>
+			</div>
+			<div class="flex justify-between">
+				<dt class="font-mono dark:text-gray-400 text-gray-600">Alt + B</dt>
+				<dd class="dark:text-gray-300 text-gray-700">Boost all fans (100%)</dd>
+			</div>
+			<div class="flex justify-between">
+				<dt class="font-mono dark:text-gray-400 text-gray-600">Alt + E</dt>
+				<dd class="dark:text-gray-300 text-gray-700">Export configuration</dd>
+			</div>
+			<div class="flex justify-between">
+				<dt class="font-mono dark:text-gray-400 text-gray-600">Alt + R</dt>
+				<dd class="dark:text-gray-300 text-gray-700">Refresh page</dd>
+			</div>
+			<div class="flex justify-between">
+				<dt class="font-mono dark:text-gray-400 text-gray-600">1-9</dt>
+				<dd class="dark:text-gray-300 text-gray-700">Apply preset 1-9</dd>
+			</div>
+		</dl>
+	</div>
+</div>
