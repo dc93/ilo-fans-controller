@@ -1,0 +1,23 @@
+[Unit]
+Description=iLO Fans Controller WebSocket Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/html/ilo-fans-controller
+ExecStart=/usr/bin/php /var/www/html/ilo-fans-controller/websocket-server.php
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log
+
+[Install]
+WantedBy=multi-user.target

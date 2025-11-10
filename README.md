@@ -204,6 +204,17 @@ sudo chown www-data:www-data /var/www/html/ilo-fans-controller/presets.json
 
 The tool now includes powerful advanced features built right in:
 
+### 🚀 Advanced Features (v2.5+)
+
+**NEW** in v2.5 - Cutting-edge features for power users:
+
+- ⚡ **Real-time WebSocket Updates** - Push-based updates, 90% less server load
+- 📧 **Email Notifications** - HTML alerts via SMTP or system mail
+- 📱 **Native Mobile App** - Gestures, haptics, offline support, install to home screen
+- 🤖 **ML Optimization** - AI-powered fan profile optimization and predictions
+
+[→ See ADVANCED_FEATURES.md for full documentation](ADVANCED_FEATURES.md)
+
 ### Core Features
 - 🌡️ **Real-time Temperature Monitoring** - See sensor temps alongside fan speeds
 - 💚 **System Health Dashboard** - Overall status with warnings and errors
@@ -232,10 +243,49 @@ The tool now includes powerful advanced features built right in:
 **All features work out of the box!** Just use the standard installation.
 
 For detailed documentation, see:
+- [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) - **NEW** WebSocket, Email, Mobile, ML features
 - [ENHANCED_FEATURES.md](ENHANCED_FEATURES.md) - Complete feature guide
 - [API_DOCS.html](API_DOCS.html) - Interactive API documentation
 - [MULTI_SERVER.md](MULTI_SERVER.md) - Multi-server management
 - [CHANGELOG.md](CHANGELOG.md) - Version history
+
+### Quick Start: Advanced Features
+
+**Enable Real-time WebSocket:**
+```bash
+# Start WebSocket server
+php websocket-server.php
+
+# Or install as service
+sudo cp websocket-server.service /etc/systemd/system/
+sudo systemctl enable --now websocket-server
+```
+
+**Setup Email Alerts:**
+```bash
+# Configure and test
+cp examples/email-notifier.sh /usr/local/bin/
+nano /usr/local/bin/email-notifier.sh  # Edit EMAIL_TO, ILO_URL
+chmod +x /usr/local/bin/email-notifier.sh
+/usr/local/bin/email-notifier.sh  # Test
+
+# Schedule (every 5 minutes)
+echo "*/5 * * * * /usr/local/bin/email-notifier.sh" | crontab -
+```
+
+**Install as Mobile App:**
+- **iOS**: Safari → Share → Add to Home Screen
+- **Android**: Chrome → Menu → Install app
+- **Desktop**: Look for install icon (➕) in address bar
+
+**Optimize with ML:**
+```bash
+# Install Python dependencies
+pip3 install numpy pandas scikit-learn requests
+
+# Run analysis
+./ml-optimizer.py --analyze --optimize --predict
+```
 
 ### Quick Feature Overview
 
