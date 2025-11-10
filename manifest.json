@@ -1,0 +1,64 @@
+{
+  "name": "iLO Fans Controller",
+  "short_name": "iLO Fans",
+  "description": "Control HP iLO server fan speeds with an intuitive web interface",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F0F10",
+  "theme_color": "#10B981",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "screenshots": [
+    {
+      "src": "screenshot.png",
+      "sizes": "800x600",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mute All Fans",
+      "short_name": "Mute",
+      "description": "Set all fans to 15%",
+      "url": "/?action=mute",
+      "icons": [{ "src": "favicon.ico", "sizes": "any" }]
+    },
+    {
+      "name": "Normal Mode",
+      "short_name": "Normal",
+      "description": "Set all fans to 50%",
+      "url": "/?action=normal",
+      "icons": [{ "src": "favicon.ico", "sizes": "any" }]
+    },
+    {
+      "name": "Boost All Fans",
+      "short_name": "Boost",
+      "description": "Set all fans to 100%",
+      "url": "/?action=boost",
+      "icons": [{ "src": "favicon.ico", "sizes": "any" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

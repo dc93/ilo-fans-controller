@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'ilo-fans-monitor'
+
+scrape_configs:
+  - job_name: 'ilo-fans-controller'
+    static_configs:
+      - targets: ['ilo-fans-controller:80']
+    metrics_path: '/index.php'
+    params:
+      api: ['metrics']
+    scrape_interval: 30s
+    scrape_timeout: 10s

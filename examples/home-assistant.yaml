@@ -1,0 +1,181 @@
+# Home Assistant Integration for iLO Fans Controller
+# Add this to your configuration.yaml
+
+# RESTful sensors for monitoring
+sensor:
+  # Fan speeds
+  - platform: rest
+    name: "iLO Fan 1 Speed"
+    resource: "http://your-ilo-controller:8000/index.php?api=fans"
+    value_template: "{{ value_json['Fan 1'] }}"
+    unit_of_measurement: "%"
+    scan_interval: 60
+    icon: mdi:fan
+
+  - platform: rest
+    name: "iLO Fan 2 Speed"
+    resource: "http://your-ilo-controller:8000/index.php?api=fans"
+    value_template: "{{ value_json['Fan 2'] }}"
+    unit_of_measurement: "%"
+    scan_interval: 60
+    icon: mdi:fan
+
+  # Temperature sensors
+  - platform: rest
+    name: "iLO CPU Temperature"
+    resource: "http://your-ilo-controller:8000/index.php?api=temperatures"
+    value_template: "{{ value_json['CPU']['current'] if value_json['CPU'] else 'unknown' }}"
+    unit_of_measurement: "°C"
+    scan_interval: 60
+    device_class: temperature
+
+  # System health
+  - platform: rest
+    name: "iLO System Health"
+    resource: "http://your-ilo-controller:8000/index.php?api=health"
+    value_template: "{{ value_json['status'] }}"
+    scan_interval: 60
+    icon: mdi:heart-pulse
+
+  - platform: rest
+    name: "iLO Max Temperature"
+    resource: "http://your-ilo-controller:8000/index.php?api=health"
+    value_template: "{{ value_json['temperatures']['max'] }}"
+    unit_of_measurement: "°C"
+    scan_interval: 60
+    device_class: temperature
+
+# RESTful commands for control
+rest_command:
+  # Quick actions
+  ilo_mute_fans:
+    url: "http://your-ilo-controller:8000/index.php"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+    payload: '{"action": "fans", "fans": 15}'
+
+  ilo_normal_fans:
+    url: "http://your-ilo-controller:8000/index.php"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+    payload: '{"action": "fans", "fans": 50}'
+
+  ilo_boost_fans:
+    url: "http://your-ilo-controller:8000/index.php"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+    payload: '{"action": "fans", "fans": 100}'
+
+  # Custom fan speed (requires input_number)
+  ilo_set_fan_speed:
+    url: "http://your-ilo-controller:8000/index.php"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+    payload: '{"action": "fans", "fans": {{ speed }}}'
+
+# Input number for custom speed control
+input_number:
+  ilo_fan_speed:
+    name: iLO Fan Speed
+    min: 15
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:fan
+
+# Automation examples
+automation:
+  # Auto-boost fans when temperature is high
+  - alias: "iLO Auto Boost on High Temp"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.ilo_max_temperature
+        above: 70
+    action:
+      - service: rest_command.ilo_boost_fans
+
+  # Return to normal when temperature drops
+  - alias: "iLO Return to Normal"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.ilo_max_temperature
+        below: 60
+        for:
+          minutes: 5
+    action:
+      - service: rest_command.ilo_normal_fans
+
+  # Silent mode at night
+  - alias: "iLO Silent Mode at Night"
+    trigger:
+      - platform: time
+        at: "22:00:00"
+    action:
+      - service: rest_command.ilo_mute_fans
+
+  # Normal mode in morning
+  - alias: "iLO Normal Mode in Morning"
+    trigger:
+      - platform: time
+        at: "08:00:00"
+    action:
+      - service: rest_command.ilo_normal_fans
+
+  # Alert on critical health
+  - alias: "iLO Critical Health Alert"
+    trigger:
+      - platform: state
+        entity_id: sensor.ilo_system_health
+        to: "critical"
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "⚠️ iLO Critical Health"
+          message: "Server health is critical! Check immediately."
+          data:
+            priority: high
+            ttl: 0
+
+# Lovelace dashboard card example
+# Add this to your dashboard YAML:
+#
+# type: entities
+# title: iLO Server Monitoring
+# entities:
+#   - entity: sensor.ilo_system_health
+#     name: Health Status
+#   - entity: sensor.ilo_max_temperature
+#     name: Max Temperature
+#   - entity: sensor.ilo_fan_1_speed
+#     name: Fan 1
+#   - entity: sensor.ilo_fan_2_speed
+#     name: Fan 2
+#   - type: section
+#   - entity: input_number.ilo_fan_speed
+#     name: Set Speed
+#   - type: button
+#     name: Apply Speed
+#     tap_action:
+#       action: call-service
+#       service: rest_command.ilo_set_fan_speed
+#       data:
+#         speed: "{{ states('input_number.ilo_fan_speed') }}"
+#   - type: button
+#     name: Mute
+#     tap_action:
+#       action: call-service
+#       service: rest_command.ilo_mute_fans
+#   - type: button
+#     name: Normal
+#     tap_action:
+#       action: call-service
+#       service: rest_command.ilo_normal_fans
+#   - type: button
+#     name: Boost
+#     tap_action:
+#       action: call-service
+#       service: rest_command.ilo_boost_fans

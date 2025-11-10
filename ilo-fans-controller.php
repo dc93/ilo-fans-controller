@@ -299,6 +299,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 				header('Content-Disposition: attachment; filename="ilo-config-' . date('Y-m-d') . '.json"');
 				die(json_encode($config, JSON_PRETTY_PRINT));
 
+			case 'metrics':
+				// Prometheus metrics endpoint
+				header('Content-Type: text/plain; version=0.0.4');
+
+				$fans = get_fans();
+				$temperatures = get_temperatures();
+				$health = get_health_status();
+
+				$metrics = [];
+
+				// Help and type declarations
+				$metrics[] = '# HELP ilo_fan_speed_percent Fan speed in percentage';
+				$metrics[] = '# TYPE ilo_fan_speed_percent gauge';
+
+				foreach ($fans as $fan_name => $speed) {
+					$label = strtolower(str_replace(' ', '_', $fan_name));
+					$metrics[] = "ilo_fan_speed_percent{fan=\"$label\"} $speed";
+				}
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_fan_speed_pwm Fan speed in PWM (0-255)';
+				$metrics[] = '# TYPE ilo_fan_speed_pwm gauge';
+
+				foreach ($fans as $fan_name => $speed) {
+					$label = strtolower(str_replace(' ', '_', $fan_name));
+					$pwm = ceil($speed / 100 * 255);
+					$metrics[] = "ilo_fan_speed_pwm{fan=\"$label\"} $pwm";
+				}
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_temperature_celsius Temperature in Celsius';
+				$metrics[] = '# TYPE ilo_temperature_celsius gauge';
+
+				foreach ($temperatures as $temp_name => $temp_data) {
+					if ($temp_data['current']) {
+						$label = strtolower(str_replace([' ', '/'], ['_', '_'], $temp_name));
+						$metrics[] = "ilo_temperature_celsius{sensor=\"$label\"} {$temp_data['current']}";
+					}
+				}
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_temperature_threshold_celsius Temperature threshold in Celsius';
+				$metrics[] = '# TYPE ilo_temperature_threshold_celsius gauge';
+
+				foreach ($temperatures as $temp_name => $temp_data) {
+					if ($temp_data['upper_threshold']) {
+						$label = strtolower(str_replace([' ', '/'], ['_', '_'], $temp_name));
+						$metrics[] = "ilo_temperature_threshold_celsius{sensor=\"$label\",type=\"upper\"} {$temp_data['upper_threshold']}";
+					}
+				}
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_health_status System health status (0=unknown, 1=healthy, 2=warning, 3=critical)';
+				$metrics[] = '# TYPE ilo_health_status gauge';
+
+				$status_map = ['unknown' => 0, 'healthy' => 1, 'warning' => 2, 'critical' => 3];
+				$status_value = $status_map[$health['status']] ?? 0;
+				$metrics[] = "ilo_health_status $status_value";
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_fans_total Total number of fans';
+				$metrics[] = '# TYPE ilo_fans_total gauge';
+				$metrics[] = "ilo_fans_total {$health['fans']['total']}";
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_fans_responding Number of responding fans';
+				$metrics[] = '# TYPE ilo_fans_responding gauge';
+				$metrics[] = "ilo_fans_responding {$health['fans']['responding']}";
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_fans_errors Number of fan errors';
+				$metrics[] = '# TYPE ilo_fans_errors gauge';
+				$metrics[] = "ilo_fans_errors {$health['fans']['errors']}";
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_scrape_duration_seconds Time taken to scrape metrics';
+				$metrics[] = '# TYPE ilo_scrape_duration_seconds gauge';
+				$scrape_start = microtime(true);
+				$scrape_duration = microtime(true) - $scrape_start;
+				$metrics[] = "ilo_scrape_duration_seconds $scrape_duration";
+
+				$metrics[] = '';
+				$metrics[] = '# HELP ilo_up Whether the iLO is reachable (1=up, 0=down)';
+				$metrics[] = '# TYPE ilo_up gauge';
+				$up = $health['ilo_connection'] === 'ok' ? 1 : 0;
+				$metrics[] = "ilo_up $up";
+
+				die(implode("\n", $metrics) . "\n");
+
 			default:
 				http_response_code(404);
 				die(json_encode(['error' => 'Unknown API endpoint'], JSON_PRETTY_PRINT));

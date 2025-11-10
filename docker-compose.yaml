@@ -3,10 +3,85 @@ services:
     build:
       context: https://github.com/alex3025/ilo-fans-controller.git#main
       dockerfile: Dockerfile
+    container_name: ilo-fans-controller
+    restart: unless-stopped
     ports:
       # You can use whatever (unused) port instead of 8000.
       - "8000:80"
     environment:
+      # Required: iLO connection settings
       ILO_HOST: 'your-ilo-address'  # Ex. 192.168.1.69
       ILO_USERNAME: 'your-ilo-username'  # Ex. Administrator
       ILO_PASSWORD: 'your-ilo-password'  # Ex. AdministratorPassword1234
+
+      # Optional: SSH key authentication (more secure than password)
+      # ILO_SSH_PUBLIC_KEY: '/keys/id_rsa.pub'
+      # ILO_SSH_PRIVATE_KEY: '/keys/id_rsa'
+      # ILO_SSH_KEY_PASSPHRASE: ''
+
+    volumes:
+      # Persist data (history, logs, presets)
+      - ./data:/var/www/html/data
+      - ./presets.json:/var/www/html/presets.json
+
+      # Optional: Mount SSH keys if using key authentication
+      # - ./ssh-keys:/keys:ro
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/index.php?api=health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Resource limits (optional but recommended)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+    networks:
+      - ilo-network
+
+  # Optional: Prometheus for monitoring
+  # Uncomment to enable metrics collection
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: prometheus
+  #   restart: unless-stopped
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus-data:/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #   networks:
+  #     - ilo-network
+
+  # Optional: Grafana for visualization
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: grafana
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   networks:
+  #     - ilo-network
+
+networks:
+  ilo-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:

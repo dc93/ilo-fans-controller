@@ -204,6 +204,7 @@ sudo chown www-data:www-data /var/www/html/ilo-fans-controller/presets.json
 
 The tool now includes powerful advanced features built right in:
 
+### Core Features
 - 🌡️ **Real-time Temperature Monitoring** - See sensor temps alongside fan speeds
 - 💚 **System Health Dashboard** - Overall status with warnings and errors
 - ⚡ **Quick Action Buttons** - Mute/Normal/Boost all fans with one click
@@ -215,9 +216,26 @@ The tool now includes powerful advanced features built right in:
 - 📐 **PWM Value Display** - See exact PWM values (0-255)
 - 📝 **Activity Logging** - Track all changes with timestamps
 
+### Integration & Monitoring
+- 📱 **Progressive Web App (PWA)** - Install on desktop/mobile, works offline
+- 📈 **Prometheus Metrics** - Enterprise monitoring with `/metrics` endpoint
+- 🔔 **Webhook Alerts** - Discord, Slack, Teams notifications for critical events
+- 🏠 **Home Assistant** - Complete integration with sensors and automations
+- 🖥️ **Multi-Server Support** - Manage multiple iLO servers (see [MULTI_SERVER.md](MULTI_SERVER.md))
+
+### Tools & Utilities
+- ⚙️ **Automated Install Script** - One-command setup with `install.sh`
+- 📖 **Interactive API Docs** - Test all endpoints in your browser
+- 🕒 **Scheduler Examples** - Time-based automation for day/night profiles
+- 🎛️ **PID Control Setup** - Temperature-curve based dynamic fan control
+
 **All features work out of the box!** Just use the standard installation.
 
-For detailed documentation, see [ENHANCED_FEATURES.md](ENHANCED_FEATURES.md).
+For detailed documentation, see:
+- [ENHANCED_FEATURES.md](ENHANCED_FEATURES.md) - Complete feature guide
+- [API_DOCS.html](API_DOCS.html) - Interactive API documentation
+- [MULTI_SERVER.md](MULTI_SERVER.md) - Multi-server management
+- [CHANGELOG.md](CHANGELOG.md) - Version history
 
 ### Quick Feature Overview
 
@@ -245,7 +263,107 @@ curl http://your-server/index.php?api=logs&limit=100
 
 # Export configuration
 curl http://your-server/index.php?api=export > backup.json
+
+# Prometheus metrics (for monitoring)
+curl http://your-server/index.php?api=metrics
 ```
+
+**Installation & Setup:**
+```bash
+# Quick install with automated script
+wget https://raw.githubusercontent.com/alex3025/ilo-fans-controller/main/install.sh
+chmod +x install.sh
+sudo ./install.sh
+
+# Or use Docker with data persistence
+docker run -d --name ilo-fans-controller --restart always \
+    -p 8000:80 \
+    -e ILO_HOST='your-ilo-address' \
+    -e ILO_USERNAME='your-ilo-username' \
+    -e ILO_PASSWORD='your-ilo-password' \
+    -v ilo-data:/var/www/html/data \
+    ghcr.io/alex3025/ilo-fans-controller:latest
+```
+
+---
+
+## 🔗 Integrations
+
+### Home Assistant
+
+Complete Home Assistant integration with sensors, controls, and automations.
+
+**Setup:**
+1. Copy configuration from `examples/home-assistant.yaml`
+2. Add to your Home Assistant `configuration.yaml`
+3. Restart Home Assistant
+
+**Features:**
+- Temperature and fan speed sensors
+- Fan control commands (Mute/Normal/Boost)
+- Automated temperature-based fan control
+- Silent mode scheduling (night/day)
+- Critical health alerts to mobile devices
+
+See [examples/home-assistant.yaml](examples/home-assistant.yaml) for complete configuration.
+
+### Prometheus + Grafana
+
+Enterprise-grade monitoring with metrics and dashboards.
+
+**Quick Start:**
+```bash
+# Use the included docker-compose.yaml
+docker-compose up -d
+
+# Access Grafana at http://localhost:3000
+# Prometheus at http://localhost:9090
+```
+
+The `/metrics` endpoint provides:
+- Fan speeds as Prometheus gauges
+- Temperature readings from all sensors
+- System health status
+- Last update timestamp
+
+See [prometheus.yml](prometheus.yml) for scrape configuration.
+
+### Webhook Notifications
+
+Get instant alerts for critical events via Discord, Slack, or Microsoft Teams.
+
+**Setup:**
+```bash
+# Copy and configure the notifier
+cp examples/webhook-notifier.sh /usr/local/bin/
+chmod +x /usr/local/bin/webhook-notifier.sh
+
+# Edit configuration
+nano /usr/local/bin/webhook-notifier.sh
+
+# Add to crontab (check every 5 minutes)
+echo "*/5 * * * * /usr/local/bin/webhook-notifier.sh" | crontab -
+```
+
+**Alerts for:**
+- High temperature warnings (>70°C)
+- Critical temperature alerts (>80°C)
+- Fan failures
+- System health changes
+
+See [examples/webhook-notifier.sh](examples/webhook-notifier.sh) for configuration.
+
+### Multi-Server Management
+
+Manage multiple iLO servers from a unified interface.
+
+**Approaches:**
+1. **Multiple Docker instances** (recommended for 2-3 servers)
+2. **Reverse proxy with path routing** (for 5-10 servers)
+3. **Custom unified dashboard** (for custom requirements)
+4. **Prometheus + Grafana** (enterprise, 10+ servers)
+
+See [MULTI_SERVER.md](MULTI_SERVER.md) for detailed setup guides and examples.
 
 ---
 
