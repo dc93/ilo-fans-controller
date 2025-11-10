@@ -47,7 +47,7 @@ See my [original comment on r/homelab](https://www.reddit.com/r/homelab/comments
 
 ### How can I offer you a coffee? ☕
 
-If you found this tool useful, consider offering me a coffee using [PayPal](https://paypal.me/alex3025) or via [GitHub Sponsors](hhttps://github.com/sponsors/alex3025) to support my work! Thank you so much! 🙏
+If you found this tool useful, consider offering me a coffee using [PayPal](https://paypal.me/alex3025) or via [GitHub Sponsors](https://github.com/sponsors/alex3025) to support my work! Thank you so much! 🙏
 
 ---
 
